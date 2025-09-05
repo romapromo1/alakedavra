@@ -297,6 +297,7 @@
         let lastTime = performance.now() / 1000;
         let elapsed = 0;
         let coinCount = 0;
+        let coinsSpawned = 0; // сколько монет уже выпало (для ограничения ускорения)
         let coinFlashTimer = null;
         // Динамическая скорость падения
         let fallSpeed = BASE_FALL_SPEED;
@@ -355,34 +356,25 @@
         }
 
         function spawnWave() {
+          // Спавним пачку из одной точки, чуть выше экрана, затем разлетаются
           const count = 1 + Math.floor(Math.random() * 3); // 1..3
-          const spawned = [];
-          let attempts = 0;
-          const spreadX = OBJECT_SIZE * 3.2;
-          while (spawned.length < count && attempts < 60) {
-            attempts++;
-            const ox = randRange(-spreadX, spreadX);
-            const oy = TOP_Y + randRange(-OBJECT_SIZE * 0.4, OBJECT_SIZE * 0.4);
-            // проверка на дистанцию между уже созданными в этом спавне
-            let ok = true;
-            for (const s of spawned) {
-              const dx = s.x - ox;
-              const dy = s.y - oy;
-              if (dx * dx + dy * dy < MIN_DISTANCE * MIN_DISTANCE) { ok = false; break; }
-            }
-            if (!ok) continue;
-            // проверка с ранее существующими объектами
-            if (!canPlaceAt(ox, oy, OBJECT_SIZE * 0.6)) continue;
+          const originX = randRange(-OBJECT_SIZE * 0.6, OBJECT_SIZE * 0.6); // почти центр
+          const originY = TOP_Y + OBJECT_SIZE * 1.6; // чуть выше, чтобы появлялись сверху
 
-            spawned.push({ x: ox, y: oy });
-          }
-
-          for (const pos of spawned) {
+          for (let i = 0; i < count; i++) {
             const { mesh, radius } = makeRandomMesh();
-            mesh.position.set(pos.x, pos.y, 0);
-            const vx = randRange(-MAX_VX, MAX_VX);
-            const vy = 0;
-            const rot = new THREE.Vector3(randRange(-ROT_SPEED, ROT_SPEED), randRange(-ROT_SPEED, ROT_SPEED), randRange(-ROT_SPEED, ROT_SPEED));
+            mesh.position.set(originX, originY, 0);
+
+            // Задаём начальную скорость разлёта в стороны, слегка вверх
+            const speed = randRange(MAX_VX * 0.8, MAX_VX * 1.6);
+            const vx = randRange(-1, 1) * speed; // разлёт влево/вправо
+            const vy = randRange(40, 140);       // чуть вверх, падение быстро перевесит
+            const rot = new THREE.Vector3(
+              randRange(-ROT_SPEED, ROT_SPEED),
+              randRange(-ROT_SPEED, ROT_SPEED),
+              randRange(-ROT_SPEED, ROT_SPEED)
+            );
+
             scene.add(mesh);
             objects.push({ mesh, vx, vy, rot, radius });
           }
@@ -470,6 +462,10 @@
           fallSpeedTimer = 0;
           coinAccumulator = 0;
           coinInterval = COIN_INTERVAL;
+          coinCount = 0;        // обнуляем очки в новой игре
+          coinsSpawned = 0;     // и счётчик выпавших монет
+          // обновим отображение на случай, если оно было видно
+          coinFlashEl.textContent = `+${coinCount}`;
           elapsed = 0;
           running = true;
         }
@@ -600,7 +596,11 @@
             if (coinAccumulator >= coinInterval) {
               coinAccumulator -= coinInterval;
               spawnCoin();
-              coinInterval /= 1.2;
+              coinsSpawned += 1;
+              // После 10-й выпавшей монеты больше не сокращаем интервал
+              if (coinsSpawned < 10) {
+                coinInterval /= 1.2;
+              }
             }
 
             // Магнитное отталкивание (попарно)
@@ -751,4 +751,4 @@
     </script>
   </body>
   </html>
-dfdsfsfdsfsdf jghgfhgfgf jh
+
