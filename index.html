@@ -293,7 +293,9 @@
         let spawnInterval = SPAWN_INTERVAL_BASE;
         let spawnIntervalTimer = 0; // каждые 2 сек сокращаем интервал *1/1.1
         let coinAccumulator = 0;
+        let coinInterval = COIN_INTERVAL;
         let lastTime = performance.now() / 1000;
+        let elapsed = 0;
         let coinCount = 0;
         let coinFlashTimer = null;
         // Динамическая скорость падения
@@ -466,6 +468,9 @@
           spawnIntervalTimer = 0;
           fallSpeed = BASE_FALL_SPEED;
           fallSpeedTimer = 0;
+          coinAccumulator = 0;
+          coinInterval = COIN_INTERVAL;
+          elapsed = 0;
           running = true;
         }
 
@@ -571,18 +576,19 @@
           lastTime = now;
 
           if (running) {
+            elapsed += dt;
             spawnAccumulator += dt;
             // Уменьшаем интервал спавна: каждые 2 сек делим на 1.1
-            spawnIntervalTimer += dt;
-            if (spawnIntervalTimer >= 2) {
+            if (elapsed < 20) spawnIntervalTimer += dt;
+            if (spawnIntervalTimer >= 2 && elapsed < 20) {
               spawnIntervalTimer -= 2;
               spawnInterval /= 1.1;
               // Минимальный предел, чтобы не ушло в бесконечный спавн
               if (spawnInterval < 0.15) spawnInterval = 0.15;
             }
             // Ускорение падения: каждые 10 секунд ×1.3
-            fallSpeedTimer += dt;
-            if (fallSpeedTimer >= 2) {
+            if (elapsed < 20) fallSpeedTimer += dt;
+            if (fallSpeedTimer >= 2 && elapsed < 20) {
               fallSpeedTimer -= 2;
               fallSpeed *= 1.2;
             }
@@ -591,9 +597,10 @@
               spawnAccumulator -= spawnInterval;
               spawnWave();
             }
-            if (coinAccumulator >= COIN_INTERVAL) {
-              coinAccumulator -= COIN_INTERVAL;
+            if (coinAccumulator >= coinInterval) {
+              coinAccumulator -= coinInterval;
               spawnCoin();
+              coinInterval /= 1.2;
             }
 
             // Магнитное отталкивание (попарно)
